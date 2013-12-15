@@ -6,39 +6,61 @@ import constants
 from random import randint
 
 
-#functions to create our resources
-def load_image(name, colorkey=None):
+def load_image(name):
     try:
         image = pygame.image.load(name)
     except pygame.error, message:
         print 'Cannot load image:', name
         raise SystemExit, message
-    image = image.convert()
-    if colorkey is not None:
-        if colorkey is -1:
-            colorkey = image.get_at((0,0))
-        image.set_colorkey(colorkey, RLEACCEL)
+    image = image.convert_alpha()
+    colorkey = image.get_at((0,0))
+    image.set_colorkey(colorkey, RLEACCEL)
     return image, image.get_rect()
 
-class Goodie(pygame.sprite.Sprite):
-    def __init__(self,x,y,ttheta,img):
+class SomeSprites(pygame.sprite.Group):
+    def __init__(self):
+        pygame.sprite.Group.__init__(self)
+    def draw(self,win):
+        pygame.sprite.Group.draw(self, win)
+        for thing in self:
+            thing.draw(win)
+        
+
+class HealthyThing(pygame.sprite.Sprite):
+    def __init__(self,health):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_image(img, -1)
+        self.health = health
+        self.original_health = health
+    def hurt(self,value):
+        self.health -= value;
+        if self.health <= 0:
+            self.kill()
+    def draw(self, win):
+        if not self.health == self.original_health:
+            x = self.rect.centerx +(self.rect.width/5)
+            y = self.rect.centery+(self.rect.height/5)
+            w = self.rect.width/2
+            h = 10
+            pygame.draw.rect(win, (0,0,0), (x,y,w,h), 0) 
+            win.fill((0,255,0), (x,y,w*(float(self.health)/self.original_health),h)) 
+            pygame.draw.rect(win, (255,255,255), (x,y,w,h), 1) 
+
+class Goodie(HealthyThing):
+    def __init__(self,x,y,ttheta,img):
+        HealthyThing.__init__(self, 20)
+        self.image, self.rect = load_image(img)
         self.ttheta = ttheta
         self.set_theta(0)
         screen = pygame.display.get_surface()
         self.area = screen.get_rect()
         self.dx = 0
 
-
-
     def set_theta(self,theta):
         self.tx = -math.sin(theta + self.ttheta)*50
         self.ty = -math.cos(theta + self.ttheta)*50
 
     def set_origin(self,x,y):
-        self.rect.left = x + self.tx
-        self.rect.top = y + self.ty
+        self.rect.center = (x + self.tx, y + self.ty)
 
     def get_theta(self,theta):
         return ((theta + self.ttheta + math.pi) % (2 * math.pi)) - math.pi
@@ -61,7 +83,22 @@ class CannonShip(Goodie):
     def fire_bullets(self):
         return Bullet(self.rect.left + (self.rect.width/2), self.rect.top)
 
-class Goodies(pygame.sprite.Group):
+class HeartShip(HealthyThing):
+    def __init__(self,x,y):
+        HealthyThing.__init__(self,20)
+        self.image, self.rect = load_image('ship-heart.png')
+        screen = pygame.display.get_surface()
+        self.area = screen.get_rect()
+        self.set_origin(x,y)
+    def set_origin(self,x,y):
+        self.rect.center  = (x,y)
+    def get_theta(self,theta):
+        return 100
+    def set_theta(self,theta):
+        pass
+
+
+class Goodies(SomeSprites):
     def __init__(self,x,y):
         pygame.sprite.Group.__init__(self)
         self.x = x
@@ -75,6 +112,7 @@ class Goodies(pygame.sprite.Group):
         self.add(first_goodie)
         self.add(ShieldShip(x, y, math.pi * 2/3))
         self.add(CannonShip(x, y, math.pi * 4/3))
+        self.add(HeartShip(x, y));
         
     def start_moving_left(self):
             self.dx = -8;
@@ -125,10 +163,10 @@ class Goodies(pygame.sprite.Group):
 
             
 
-class Baddie(pygame.sprite.Sprite):
+class Baddie(HealthyThing):
     def __init__(self,x,y):
-        pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_image('baddie.png', -1)
+        HealthyThing.__init__(self, 4)
+        self.image, self.rect = load_image('baddie.png')
         screen = pygame.display.get_surface()
         self.area = screen.get_rect()
         self.rect.topleft = x, y
@@ -137,11 +175,14 @@ class Baddie(pygame.sprite.Sprite):
         self.rect.top = self.rect.top + 5
         if self.rect.top > SCREEN_SIZE:
             self.kill()
+    def bang(self, goodie):
+        goodie.hurt(1)
+        self.hurt(1)
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_image('bullet.png', -1)
+        self.image, self.rect = load_image('bullet.png')
         screen = pygame.display.get_surface()
         self.area = screen.get_rect()
         self.rect.topleft = x - self.rect.width/2, y
@@ -151,12 +192,12 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()
     def bang(self,baddie):
         self.kill()
-        baddie.kill()
+        baddie.hurt(1)
 
 class Shield(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = load_image('shield.png', -1)
+        self.image, self.rect = load_image('shield.png')
         screen = pygame.display.get_surface()
         self.area = screen.get_rect()
         self.rect.topleft = x - self.rect.width/2, y
@@ -185,7 +226,7 @@ def main():
         
         goodies = Goodies(SCREEN_SIZE/2, 700)
         bullets = pygame.sprite.Group()
-        baddies = pygame.sprite.Group()
+        baddies = SomeSprites()
         baddies.add(Baddie(10,10))
         baddies.add(Baddie(50,10))
         baddies.add(Baddie(400,10))
@@ -204,12 +245,16 @@ def main():
                         goodies.start_moving_left()
                     if event.key == K_l:
                         goodies.start_moving_right()
-                    if event.key == K_SPACE:
-                        bullets.add(goodies.fire_bullets())
                     if event.key == K_j:
                         goodies.start_rotating_left()
                     if event.key == K_k:
                         goodies.start_rotating_right()
+
+                    if event.key == K_SPACE:
+                        bullets.add(goodies.fire_bullets())
+                        goodies.stop_rotating_left()
+                        goodies.stop_rotating_right()
+
                 elif event.type == KEYUP:
                     if event.key == K_h:
                         goodies.stop_moving_left()
@@ -238,6 +283,11 @@ def main():
                 for bullet in some_bullets:
                     bullet.bang(baddie)
                 
+            collisions = pygame.sprite.groupcollide(goodies, baddies, False, False)
+            for goodie in collisions:
+                some_baddies = collisions[goodie]
+                for baddie in some_baddies:
+                    baddie.bang(goodie)
 
             if len(baddies) < 3:
                 baddies.add(Baddie(randint(0,SCREEN_SIZE),20))
