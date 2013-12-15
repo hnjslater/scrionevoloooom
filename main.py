@@ -96,6 +96,9 @@ class HeartShip(HealthyThing):
         return 100
     def set_theta(self,theta):
         pass
+    def kill(self):
+        constants.PLAYING = False
+        pygame.sprite.Sprite.kill(self)
 
 
 class Goodies(SomeSprites):
@@ -159,7 +162,10 @@ class Goodies(SomeSprites):
             goodie.set_origin(self.x, self.y) 
 
     def fire_bullets(self):
-        return self.gunner.fire_bullets()
+        if self.gunner in self:
+            return self.gunner.fire_bullets()
+        else:
+            return []
 
             
 
@@ -207,7 +213,7 @@ class Shield(pygame.sprite.Sprite):
         if self.age > 60:
             self.kill()
     def bang(self,baddie):
-        baddie.kill()
+        baddie.hurt(2)
 
 
 def main():
@@ -224,73 +230,75 @@ def main():
 
 
         
-        goodies = Goodies(SCREEN_SIZE/2, 700)
-        bullets = pygame.sprite.Group()
-        baddies = SomeSprites()
-        baddies.add(Baddie(10,10))
-        baddies.add(Baddie(50,10))
-        baddies.add(Baddie(400,10))
+
+
 	while True:
             win.fill(pygame.Color(0,0,0))
+            if constants.PLAYING:
+                for event in pygame.event.get():
+                    if event.type == QUIT:
+                        pygame.quit()
+                        sys.exit()
+                        
+                    elif event.type == KEYDOWN:
+                        if event.key == K_h:
+                            goodies.start_moving_left()
+                        if event.key == K_l:
+                            goodies.start_moving_right()
+                        if event.key == K_j:
+                            goodies.start_rotating_left()
+                        if event.key == K_k:
+                            goodies.start_rotating_right()
 
+                        if event.key == K_SPACE:
+                            bullets.add(goodies.fire_bullets())
+                            goodies.stop_rotating_left()
+                            goodies.stop_rotating_right()
 
-            
-            for event in pygame.event.get():
-                if event.type == QUIT:
-                    pygame.quit()
-                    sys.exit()
+                    elif event.type == KEYUP:
+                        if event.key == K_h:
+                            goodies.stop_moving_left()
+                        if event.key == K_l:
+                            goodies.stop_moving_right()
+                        if event.key == K_j:
+                            goodies.stop_rotating_left()
+                        if event.key == K_k:
+                            goodies.stop_rotating_right()
+
+                goodies.update(win)
+                goodies.draw(win)
+
+                bullets.update(win)
+                bullets.draw(win)
+
+                baddies.update(win)
+                baddies.draw(win)
+
+                collisions = pygame.sprite.groupcollide(baddies, bullets, False, False)
+                for baddie in collisions:
+                    some_bullets = collisions[baddie]
+                    for bullet in some_bullets:
+                        bullet.bang(baddie)
                     
-                elif event.type == KEYDOWN:
-                    if event.key == K_h:
-                        goodies.start_moving_left()
-                    if event.key == K_l:
-                        goodies.start_moving_right()
-                    if event.key == K_j:
-                        goodies.start_rotating_left()
-                    if event.key == K_k:
-                        goodies.start_rotating_right()
+                collisions = pygame.sprite.groupcollide(goodies, baddies, False, False)
+                for goodie in collisions:
+                    some_baddies = collisions[goodie]
+                    for baddie in some_baddies:
+                        baddie.bang(goodie)
 
-                    if event.key == K_SPACE:
-                        bullets.add(goodies.fire_bullets())
-                        goodies.stop_rotating_left()
-                        goodies.stop_rotating_right()
+                if len(baddies) < 3:
+                    baddies.add(Baddie(randint(0,SCREEN_SIZE),20))
+            else:
+                for event in pygame.event.get():
+                    if event.type == QUIT:
+                        pygame.quit()
+                        sys.exit()
+                    if event.type == KEYUP and event.key == K_SPACE:
+                        constants.PLAYING = True
+                        goodies = Goodies(SCREEN_SIZE/2, 700)
+                        bullets = pygame.sprite.Group()
+                        baddies = SomeSprites()
 
-                elif event.type == KEYUP:
-                    if event.key == K_h:
-                        goodies.stop_moving_left()
-                    if event.key == K_l:
-                        goodies.stop_moving_right()
-                    if event.key == K_j:
-                        goodies.stop_rotating_left()
-                    if event.key == K_k:
-                        goodies.stop_rotating_right()
-
-
-
-
-            goodies.update(win)
-            goodies.draw(win)
-
-            bullets.update(win)
-            bullets.draw(win)
-
-            baddies.update(win)
-            baddies.draw(win)
-
-            collisions = pygame.sprite.groupcollide(baddies, bullets, False, False)
-            for baddie in collisions:
-                some_bullets = collisions[baddie]
-                for bullet in some_bullets:
-                    bullet.bang(baddie)
-                
-            collisions = pygame.sprite.groupcollide(goodies, baddies, False, False)
-            for goodie in collisions:
-                some_baddies = collisions[goodie]
-                for baddie in some_baddies:
-                    baddie.bang(goodie)
-
-            if len(baddies) < 3:
-                baddies.add(Baddie(randint(0,SCREEN_SIZE),20))
 
             pygame.display.update()
             fpsClock.tick(60)
