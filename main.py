@@ -215,6 +215,12 @@ class Shield(pygame.sprite.Sprite):
     def bang(self,baddie):
         baddie.hurt(2)
 
+class Welcome(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image, self.rect = load_image('intro.png')
+        self.rect.center = (x, y)
+
 
 def main():
 	pygame.init()
@@ -229,7 +235,7 @@ def main():
 	font = pygame.font.Font(None, 20)
 
 
-        
+        welcome = pygame.sprite.Group(Welcome(SCREEN_SIZE/2, SCREEN_SIZE/2))
 
 
 	while True:
@@ -298,6 +304,7 @@ def main():
                         goodies = Goodies(SCREEN_SIZE/2, 700)
                         bullets = pygame.sprite.Group()
                         baddies = SomeSprites()
+                welcome.draw(win)
 
 
             pygame.display.update()
