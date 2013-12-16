@@ -270,6 +270,15 @@ class Welcome(pygame.sprite.Sprite):
         self.image, self.rect = load_image('intro.png')
         self.rect.center = (x, y)
 
+class YouWin(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image, self.rect = load_image('you-win.png')
+        self.rect.center = (SCREEN_SIZE/2, 0)
+    def update(self, *arg):
+        self.rect.top = self.rect.top + 5
+        if (self.rect.bottom > SCREEN_SIZE):
+            constants.PLAYING = False
 
 def main():
 	pygame.init()
@@ -285,11 +294,19 @@ def main():
 
 
         welcome = pygame.sprite.Group(Welcome(SCREEN_SIZE/2, SCREEN_SIZE/2))
+        you_win = pygame.sprite.Group(YouWin())
         frame_count = 0
 
 	while True:
             win.fill(pygame.Color(0,0,0))
-            if constants.PLAYING:
+            if constants.PLAYING and frame_count > 2000:
+                for event in pygame.event.get():
+                    if event.type == QUIT:
+                        pygame.quit()
+                        sys.exit()
+                you_win.draw(win)
+                you_win.update()
+            elif constants.PLAYING:
                 for event in pygame.event.get():
                     if event.type == QUIT:
                         pygame.quit()
