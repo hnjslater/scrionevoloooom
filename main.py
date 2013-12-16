@@ -279,6 +279,7 @@ class YouWin(pygame.sprite.Sprite):
         self.rect.top = self.rect.top + 5
         if (self.rect.bottom > SCREEN_SIZE):
             constants.PLAYING = False
+            self.rect.bottom = 0
 
 def main():
 	pygame.init()
