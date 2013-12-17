@@ -287,8 +287,6 @@ def main():
 
 	win = pygame.display.set_mode((SCREEN_SIZE,SCREEN_SIZE))
 	pygame.display.set_caption('game')
-	font = pygame.font.Font(None, 20)
-
 
 	welcome = pygame.sprite.Group(Welcome(SCREEN_SIZE/2, SCREEN_SIZE/2))
 	you_win = pygame.sprite.Group(YouWin())
