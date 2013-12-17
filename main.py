@@ -7,11 +7,7 @@ from random import randint
 
 
 def load_image(name):
-    try:
-        image = pygame.image.load(name)
-    except pygame.error, message:
-        print 'Cannot load image:', name
-        raise SystemExit, message
+    image = pygame.image.load(name)
     image = image.convert_alpha()
     colorkey = image.get_at((0,0))
     image.set_colorkey(colorkey, RLEACCEL)
@@ -158,7 +154,7 @@ class Goodies(SomeSprites):
             self.dtheta = 0
 
     def update(self, *arg):
-        if self.dtheta <> 0:
+        if self.dtheta != 0:
             self.theta = self.theta + self.dtheta
             for goodie in self:
                 goodie.set_theta(self.theta)
@@ -294,9 +290,9 @@ def main():
 	font = pygame.font.Font(None, 20)
 
 
-        welcome = pygame.sprite.Group(Welcome(SCREEN_SIZE/2, SCREEN_SIZE/2))
-        you_win = pygame.sprite.Group(YouWin())
-        frame_count = 0
+	welcome = pygame.sprite.Group(Welcome(SCREEN_SIZE/2, SCREEN_SIZE/2))
+	you_win = pygame.sprite.Group(YouWin())
+	frame_count = 0
 
 	while True:
             win.fill(pygame.Color(0,0,0))
