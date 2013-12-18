@@ -45,7 +45,7 @@ class HealthyThing(pygame.sprite.Sprite):
             pygame.draw.rect(win, (255,255,255), (x,y,w,h), 1) 
 
 class Goodie(HealthyThing):
-    def __init__(self,x,y,ttheta,img):
+    def __init__(self,x,y,ttheta,theta,img):
         HealthyThing.__init__(self, 20)
         self.image, self.rect = load_image(img)
         self.ttheta = ttheta
@@ -53,6 +53,7 @@ class Goodie(HealthyThing):
         screen = pygame.display.get_surface()
         self.area = screen.get_rect()
         self.dx = 0
+        self.set_theta(theta)
 
     def set_theta(self,theta):
         self.tx = -math.sin(theta + self.ttheta)*50
@@ -65,35 +66,45 @@ class Goodie(HealthyThing):
         return ((theta + self.ttheta + math.pi) % (2 * math.pi)) - math.pi
 
 class BulletShip(Goodie):
-    def __init__(self,x,y,ttheta):
-        Goodie.__init__(self,x,y,ttheta,'ship-bullet.png')
+    def __init__(self,x,y,t):
+        Goodie.__init__(self,x,y,0,t,'ship-bullet.png')
+        Goodies.BulletShip = True
     def fire_bullets(self):
         return Bullet(self.rect.left + (self.rect.width/2), self.rect.top)
+    def kill(self):
+        pygame.sprite.Sprite.kill(self)
+        Goodies.BulletShip = False
 
 class ShieldShip(Goodie):
-    def __init__(self,x,y,ttheta):
-        Goodie.__init__(self,x,y,ttheta,'ship-shield.png')
+    def __init__(self,x,y,t):
+        Goodie.__init__(self,x,y, math.pi * 2/3,t,'ship-shield.png')
+        Goodies.ShieldShip = True
     def fire_bullets(self):
-        if len(constants.shields) < 2:
+        if len(constants.shields) == 0:
             return Shield(self.rect.left + (self.rect.width/2), self.rect.top - 50)
         else:
             return []
+    def kill(self):
+        pygame.sprite.Sprite.kill(self)
+        Goodies.ShieldShip = False
 
 class CannonShip(Goodie):
-    def __init__(self,x,y,ttheta):
-        Goodie.__init__(self,x,y,ttheta,'ship-cannon.png')
+    def __init__(self,x,y,t):
+        Goodie.__init__(self,x,y, math.pi * 4/3,t,'ship-cannon.png')
         self.since_firing = 0
+        Goodies.CannonShip = True
     def fire_bullets(self):
         if self.since_firing == 0:
-            self.since_firing = 20
+            self.since_firing = 40
             return Missile(self.rect.left + (self.rect.width/2), self.rect.top)
         else:
             return []
     def update(self, *args):
         if self.since_firing > 0:
             self.since_firing = self.since_firing - 1
-
-
+    def kill(self):
+        pygame.sprite.Sprite.kill(self)
+        Goodies.CannonShip = False
 
 class HeartShip(HealthyThing):
     def __init__(self,x,y):
@@ -122,15 +133,14 @@ class Goodies(SomeSprites):
         self.dy = 0
         self.dtheta = 0
         self.theta = 0
-        first_goodie = BulletShip(x, y, 0)
-        self.gunner = first_goodie
-        self.add(first_goodie)
-        self.add(ShieldShip(x, y, math.pi * 2/3))
-        self.add(CannonShip(x, y, math.pi * 4/3))
         self.add(HeartShip(x, y));
+        self.add_shield_ship()
+        self.add_cannon_ship()
+        self.add_bullet_ship()
+        self.update(self)
         
     def start_moving_left(self):
-            self.dx = -8;
+        self.dx = -8;
 
     def stop_moving_left(self):
         if self.dx == -8:
@@ -157,14 +167,32 @@ class Goodies(SomeSprites):
         if self.dtheta == -(math.pi / 32): 
             self.dtheta = 0
 
+    def add_shield_ship(self):
+        if not Goodies.ShieldShip and Goodies.Lives > 0:
+            self.add(ShieldShip(self.x, self.y, self.theta))
+            self.update_gunner()
+            Goodies.Lives = Goodies.Lives -1
+
+    def add_cannon_ship(self):
+        if not Goodies.CannonShip and Goodies.Lives > 0:
+            self.add(CannonShip(self.x, self.y, self.theta))
+            self.update_gunner()
+            Goodies.Lives = Goodies.Lives -1
+
+    def add_bullet_ship(self):
+        if not Goodies.BulletShip and Goodies.Lives > 0:
+            self.add(BulletShip(self.x, self.y, self.theta))
+            self.update_gunner()
+            Goodies.Lives = Goodies.Lives -1
+
     def update(self, *arg):
         if self.dtheta <> 0:
             self.theta = self.theta + self.dtheta
             for goodie in self:
                 goodie.set_theta(self.theta)
                 theta = goodie.get_theta(self.theta)
-                if theta > -(math.pi/3) and theta < (math.pi/3):
-                    self.gunner = goodie
+            self.update_gunner()
+
                 
         new_x = self.x + self.dx
         if new_x > 0 and new_x < SCREEN_SIZE:
@@ -174,13 +202,19 @@ class Goodies(SomeSprites):
             goodie.set_origin(self.x, self.y) 
             goodie.update(self, arg)
 
+    def update_gunner(self):
+        for goodie in self:
+                theta = goodie.get_theta(self.theta)
+                if theta > -(math.pi/3) and theta < (math.pi/3):
+                    self.gunner = goodie
+
     def fire_bullets(self):
         if self.gunner in self:
             return self.gunner.fire_bullets()
         else:
             return []
 
-            
+
 
 class Baddie(HealthyThing):
     def __init__(self,x,y):
@@ -201,7 +235,7 @@ class Baddie(HealthyThing):
 
 class BigBaddie(HealthyThing):
     def __init__(self,x,y):
-        HealthyThing.__init__(self, 300)
+        HealthyThing.__init__(self, 40)
         self.image, self.rect = load_image('big-baddie.png')
         screen = pygame.display.get_surface()
         self.area = screen.get_rect()
@@ -245,11 +279,11 @@ class Missile(pygame.sprite.Sprite):
             self.kill()
     def bang(self,baddie):
         self.kill()
-        baddie.hurt(100)
+        baddie.hurt(20)
 
 class Shield(HealthyThing):
     def __init__(self, x, y):
-        HealthyThing.__init__(self,20)
+        HealthyThing.__init__(self,10)
         self.image, self.rect = load_image('shield.png')
         screen = pygame.display.get_surface()
         self.area = screen.get_rect()
@@ -261,8 +295,8 @@ class Shield(HealthyThing):
         if self.age > 60:
             self.kill()
     def bang(self,baddie):
-        baddie.hurt(2)
-        self.hurt(2)
+        baddie.hurt(1)
+        self.hurt(1)
 
 class Welcome(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -322,6 +356,12 @@ def main():
                             constants.goodies.start_rotating_left()
                         if event.key == K_k:
                             constants.goodies.start_rotating_right()
+                        if event.key == K_a:
+                            constants.goodies.add_bullet_ship()
+                        if event.key == K_s:
+                            constants.goodies.add_cannon_ship()
+                        if event.key == K_d:
+                            constants.goodies.add_shield_ship()
 
                         if event.key == K_SPACE:
                             constants.bullets.add(constants.goodies.fire_bullets())
@@ -374,6 +414,10 @@ def main():
                         sys.exit()
                     if event.type == KEYUP and event.key == K_SPACE:
                         constants.PLAYING = True
+                        Goodies.CannonShip = False
+                        Goodies.BulletShip = False
+                        Goodies.ShieldShip = False
+                        Goodies.Lives = 6
                         constants.goodies = Goodies(SCREEN_SIZE/2, 700)
                         constants.bullets = pygame.sprite.Group()
                         constants.baddies = SomeSprites()
