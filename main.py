@@ -68,17 +68,17 @@ class Goodie(HealthyThing):
 class BulletShip(Goodie):
     def __init__(self,x,y,t):
         Goodie.__init__(self,x,y,0,t,'ship-bullet.png')
-        Goodies.BulletShip = True
+        BulletShip.exists = True
     def fire_bullets(self):
         return Bullet(self.rect.left + (self.rect.width/2), self.rect.top)
     def kill(self):
         pygame.sprite.Sprite.kill(self)
-        Goodies.BulletShip = False
+        BulletShip.exists = False
 
 class ShieldShip(Goodie):
     def __init__(self,x,y,t):
         Goodie.__init__(self,x,y, math.pi * 2/3,t,'ship-shield.png')
-        Goodies.ShieldShip = True
+        ShieldShip.exists = True
     def fire_bullets(self):
         if len(constants.shields) == 0:
             return Shield(self.rect.left + (self.rect.width/2), self.rect.top - 50)
@@ -86,13 +86,13 @@ class ShieldShip(Goodie):
             return []
     def kill(self):
         pygame.sprite.Sprite.kill(self)
-        Goodies.ShieldShip = False
+        ShieldShip.exists = False
 
 class CannonShip(Goodie):
     def __init__(self,x,y,t):
         Goodie.__init__(self,x,y, math.pi * 4/3,t,'ship-cannon.png')
         self.since_firing = 0
-        Goodies.CannonShip = True
+        CannonShip.exists = True
     def fire_bullets(self):
         if self.since_firing == 0:
             self.since_firing = 40
@@ -104,7 +104,7 @@ class CannonShip(Goodie):
             self.since_firing = self.since_firing - 1
     def kill(self):
         pygame.sprite.Sprite.kill(self)
-        Goodies.CannonShip = False
+        CannonShip.exists = False
 
 class HeartShip(HealthyThing):
     def __init__(self,x,y):
@@ -134,54 +134,31 @@ class Goodies(SomeSprites):
         self.dtheta = 0
         self.theta = 0
         self.add(HeartShip(x, y));
-        self.add_shield_ship()
-        self.add_cannon_ship()
-        self.add_bullet_ship()
+        CannonShip.exists = False
+        BulletShip.exists = False
+        ShieldShip.exists = False
+        self.add_ship(ShieldShip)
+        self.add_ship(CannonShip)
+        self.add_ship(BulletShip)
         self.update(self)
         
-    def start_moving_left(self):
-        self.dx = -8;
+    def start_moving(self,direction):
+        self.dx = direction;
 
-    def stop_moving_left(self):
-        if self.dx == -8:
+    def stop_moving(self,direction):
+        if self.dx == direction:
             self.dx = 0;
 
-    def start_moving_right(self):
-        self.dx = 8;
+    def start_rotating(self,direction):
+        self.dtheta = direction
 
-    def stop_moving_right(self):
-        if self.dx == 8:
-            self.dx = 0;
-
-    def start_rotating_left(self):
-        self.dtheta = math.pi / 32
-
-    def start_rotating_right(self):
-        self.dtheta = -(math.pi / 32)
-
-    def stop_rotating_left(self):
-        if self.dtheta == math.pi / 32: 
+    def stop_rotating(self,direction):
+        if self.dtheta == direction: 
             self.dtheta = 0
 
-    def stop_rotating_right(self):
-        if self.dtheta == -(math.pi / 32): 
-            self.dtheta = 0
-
-    def add_shield_ship(self):
-        if not Goodies.ShieldShip and Goodies.Lives > 0:
-            self.add(ShieldShip(self.x, self.y, self.theta))
-            self.update_gunner()
-            Goodies.Lives = Goodies.Lives -1
-
-    def add_cannon_ship(self):
-        if not Goodies.CannonShip and Goodies.Lives > 0:
-            self.add(CannonShip(self.x, self.y, self.theta))
-            self.update_gunner()
-            Goodies.Lives = Goodies.Lives -1
-
-    def add_bullet_ship(self):
-        if not Goodies.BulletShip and Goodies.Lives > 0:
-            self.add(BulletShip(self.x, self.y, self.theta))
+    def add_ship(self, ship):
+        if not ship.exists and Goodies.Lives > 0:
+            self.add(ship(self.x, self.y, self.theta))
             self.update_gunner()
             Goodies.Lives = Goodies.Lives -1
 
@@ -214,7 +191,10 @@ class Goodies(SomeSprites):
         else:
             return []
 
-
+Goodies.LEFT = -8
+Goodies.RIGHT = 8
+Goodies.ANTICLOCKWISE = math.pi / 32
+Goodies.CLOCKWISE = -(math.pi / 32)
 
 class Baddie(HealthyThing):
     def __init__(self,x,y):
@@ -349,34 +329,34 @@ def main():
                         
                     elif event.type == KEYDOWN:
                         if event.key == K_h:
-                            constants.goodies.start_moving_left()
+                            constants.goodies.start_moving(Goodies.LEFT)
                         if event.key == K_l:
-                            constants.goodies.start_moving_right()
+                            constants.goodies.start_moving(Goodies.RIGHT)
                         if event.key == K_j:
-                            constants.goodies.start_rotating_left()
+                            constants.goodies.start_rotating(Goodies.ANTICLOCKWISE)
                         if event.key == K_k:
-                            constants.goodies.start_rotating_right()
+                            constants.goodies.start_rotating(Goodies.CLOCKWISE)
                         if event.key == K_a:
-                            constants.goodies.add_bullet_ship()
+                            constants.goodies.add_ship(BulletShip)
                         if event.key == K_s:
-                            constants.goodies.add_cannon_ship()
+                            constants.goodies.add_ship(CannonShip)
                         if event.key == K_d:
-                            constants.goodies.add_shield_ship()
+                            constants.goodies.add_ship(ShieldShip)
 
                         if event.key == K_SPACE:
                             constants.bullets.add(constants.goodies.fire_bullets())
-                            constants.goodies.stop_rotating_left()
-                            constants.goodies.stop_rotating_right()
+                            constants.goodies.stop_rotating(Goodies.ANTICLOCKWISE)
+                            constants.goodies.stop_rotating(Goodies.CLOCKWISE)
 
                     elif event.type == KEYUP:
                         if event.key == K_h:
-                            constants.goodies.stop_moving_left()
+                            constants.goodies.stop_moving(Goodies.LEFT)
                         if event.key == K_l:
-                            constants.goodies.stop_moving_right()
+                            constants.goodies.stop_moving(Goodies.RIGHT)
                         if event.key == K_j:
-                            constants.goodies.stop_rotating_left()
+                            constants.goodies.stop_rotating(Goodies.ANTICLOCKWISE)
                         if event.key == K_k:
-                            constants.goodies.stop_rotating_right()
+                            constants.goodies.stop_rotating(Goodies.CLOCKWISE)
 
                 constants.goodies.update(win)
                 constants.goodies.draw(win)
@@ -414,9 +394,7 @@ def main():
                         sys.exit()
                     if event.type == KEYUP and event.key == K_SPACE:
                         constants.PLAYING = True
-                        Goodies.CannonShip = False
-                        Goodies.BulletShip = False
-                        Goodies.ShieldShip = False
+
                         Goodies.Lives = 6
                         constants.goodies = Goodies(SCREEN_SIZE/2, 700)
                         constants.bullets = pygame.sprite.Group()
