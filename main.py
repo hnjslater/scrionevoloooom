@@ -295,24 +295,41 @@ class YouWin(pygame.sprite.Sprite):
             constants.PLAYING = False
             self.rect.bottom = 0
 
+class one_up(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image, self.rect = load_image('one-up.png')
+        self.rect.center = (randint(0,SCREEN_SIZE), 0)
+    def update(self, *arg):
+        self.rect.top = self.rect.top + 5
+    def bang(self,goodie):
+        Goodies.Lives = Goodies.Lives + 1
+        self.kill()
+    def draw(self, b):
+        pass
+    def hurt(self, b):
+        pass
+
 def main():
-	pygame.init()
+    pygame.init()
 
-        #pygame.mixer.music.load('backing_music.ogg')
-        #pygame.mixer.music.play(-1, 0.0)
+    #pygame.mixer.music.load('backing_music.ogg')
+    #pygame.mixer.music.play(-1, 0.0)
 
-	fpsClock = pygame.time.Clock()
+    fpsClock = pygame.time.Clock()
 
-	win = pygame.display.set_mode((SCREEN_SIZE,SCREEN_SIZE))
-	pygame.display.set_caption('game')
-	font = pygame.font.Font(None, 20)
+    win = pygame.display.set_mode((SCREEN_SIZE,SCREEN_SIZE))
+    pygame.display.set_caption('game')
+    font = pygame.font.Font(None, 20)
 
 
-        welcome = pygame.sprite.Group(Welcome(SCREEN_SIZE/2, SCREEN_SIZE/2))
-        you_win = pygame.sprite.Group(YouWin())
-        frame_count = 0
+    welcome = pygame.sprite.Group(Welcome(SCREEN_SIZE/2, SCREEN_SIZE/2))
+    you_win = pygame.sprite.Group(YouWin())
+    frame_count = 0
 
-	while True:
+    one_up_image, one_up_rect = load_image("one-up.png")
+
+    while True:
             win.fill(pygame.Color(0,0,0))
             if constants.PLAYING and frame_count > 2000:
                 for event in pygame.event.get():
@@ -379,12 +396,19 @@ def main():
                     for baddie in some_baddies:
                         baddie.bang(goodie)
 
+
+                rand_number = randint(0,1000)
                 if len(constants.baddies) < (frame_count / 150) + 5:
-                    if frame_count > 300 and randint(0,10) == 5 and len(constants.bigbaddies) < 3:
+                    if frame_count > 300 and rand_number > 500 and len(constants.bigbaddies) < 3:
                         constants.baddies.add(BigBaddie(randint(0,SCREEN_SIZE),40))
                     else:
                         constants.baddies.add(Baddie(randint(0,SCREEN_SIZE),20))
 
+                if rand_number % 250 == 0:
+                    constants.baddies.add(one_up())
+
+                for i in range(0 ,Goodies.Lives):
+                    win.blit(one_up_image, (i*one_up_rect.width, SCREEN_SIZE-one_up_rect.height))
                 frame_count = frame_count + 1
 
             else:
@@ -401,6 +425,7 @@ def main():
                         constants.baddies = SomeSprites()
                         constants.shields = pygame.sprite.Group()
                         constants.bigbaddies = pygame.sprite.Group()
+
                         frame_count = 0
                 welcome.draw(win)
 
