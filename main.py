@@ -198,7 +198,7 @@ Goodies.CLOCKWISE = -(math.pi / 32)
 
 class Baddie(HealthyThing):
     def __init__(self,x,y):
-        HealthyThing.__init__(self, 4)
+        HealthyThing.__init__(self, 2)
         self.image, self.rect = load_image('baddie.png')
         screen = pygame.display.get_surface()
         self.area = screen.get_rect()
@@ -243,8 +243,9 @@ class Bullet(pygame.sprite.Sprite):
         if self.rect.top < 0:
             self.kill()
     def bang(self,baddie):
-        self.kill()
-        baddie.hurt(1)
+        if hasattr(baddie, "hurt"):
+            self.kill()
+            baddie.hurt(1)
 
 class Missile(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -258,8 +259,9 @@ class Missile(pygame.sprite.Sprite):
         if self.rect.top < 0:
             self.kill()
     def bang(self,baddie):
-        self.kill()
-        baddie.hurt(20)
+        if hasattr(baddie, "hurt"):
+            self.kill()
+            baddie.hurt(20)
 
 class Shield(HealthyThing):
     def __init__(self, x, y):
@@ -275,8 +277,9 @@ class Shield(HealthyThing):
         if self.age > 60:
             self.kill()
     def bang(self,baddie):
-        baddie.hurt(1)
-        self.hurt(1)
+        if hasattr(baddie, "hurt"):
+            baddie.hurt(1)
+            self.hurt(1)
 
 class Welcome(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -307,8 +310,6 @@ class one_up(pygame.sprite.Sprite):
         self.kill()
     def draw(self, b):
         pass
-    def hurt(self, b):
-        pass
 
 def main():
     pygame.init()
@@ -328,10 +329,11 @@ def main():
     frame_count = 0
 
     one_up_image, one_up_rect = load_image("one-up.png")
+    bg_stars_image, bg_rect = load_image("background.png")
 
     while True:
-            win.fill(pygame.Color(0,0,0))
             if constants.PLAYING and frame_count > 2000:
+                win.fill(pygame.Color(0,0,0))
                 for event in pygame.event.get():
                     if event.type == QUIT:
                         pygame.quit()
@@ -339,6 +341,9 @@ def main():
                 you_win.draw(win)
                 you_win.update()
             elif constants.PLAYING:
+                y = (frame_count % SCREEN_SIZE) / 2.0;
+                win.blit(bg_stars_image, (0,0), (0, bg_rect.height - y, bg_rect.width,  y - bg_rect.height))
+                win.blit(bg_stars_image, (0,y), (0, 0, bg_rect.width, bg_rect.height - y))
                 for event in pygame.event.get():
                     if event.type == QUIT:
                         pygame.quit()
@@ -412,6 +417,7 @@ def main():
                 frame_count = frame_count + 1
 
             else:
+                win.fill(pygame.Color(0,0,0))
                 for event in pygame.event.get():
                     if event.type == QUIT:
                         pygame.quit()
@@ -432,6 +438,7 @@ def main():
 
             pygame.display.update()
             fpsClock.tick(60)
+            print(fpsClock.get_fps())
 
 
 
